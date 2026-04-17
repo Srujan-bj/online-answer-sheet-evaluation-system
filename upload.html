@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload Answer Sheets</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 font-sans p-6">
+  <div class="max-w-4xl mx-auto bg-white p-8 rounded shadow">
+    <h1 class="text-2xl font-bold mb-6">Upload Question Paper and Answer Sheets</h1>
+
+    <!-- Question Paper Upload -->
+    <div class="mb-6">
+      <label class="block font-semibold mb-2">Upload Question Paper:</label>
+      <input type="file" accept="image/*,.pdf" id="questionPaper" class="mb-4"/>
+    </div>
+
+    <!-- Answer Paper Uploads -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Answer Sheet 1 -->
+      <div class="bg-gray-50 p-4 rounded shadow">
+        <label class="block font-semibold mb-2">Answer Sheet 1:</label>
+        <input type="file" accept="image/*" id="answer1" class="mb-2"/>
+        <div class="flex gap-2 mb-2">
+          <button onclick="startOCR('answer1', 1)" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Scan & Save 1</button>
+          <button onclick="clearScan(1)" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Clear</button>
+        </div>
+        <p id="status1" class="text-green-600 text-sm"></p>
+      </div>
+
+      <!-- Answer Sheet 2 -->
+      <div class="bg-gray-50 p-4 rounded shadow">
+        <label class="block font-semibold mb-2">Answer Sheet 2:</label>
+        <input type="file" accept="image/*" id="answer2" class="mb-2"/>
+        <div class="flex gap-2 mb-2">
+          <button onclick="startOCR('answer2', 2)" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Scan & Save 2</button>
+          <button onclick="clearScan(2)" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Clear</button>
+        </div>
+        <p id="status2" class="text-green-600 text-sm"></p>
+      </div>
+
+      <!-- Answer Sheet 3 -->
+      <div class="bg-gray-50 p-4 rounded shadow">
+        <label class="block font-semibold mb-2">Answer Sheet 3:</label>
+        <input type="file" accept="image/*" id="answer3" class="mb-2"/>
+        <div class="flex gap-2 mb-2">
+          <button onclick="startOCR('answer3', 3)" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Scan & Save 3</button>
+          <button onclick="clearScan(3)" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">Clear</button>
+        </div>
+        <p id="status3" class="text-green-600 text-sm"></p>
+      </div>
+    </div>
+
+    <!-- OCR Status -->
+    <div id="ocrStatus" class="mt-6 text-gray-700 hidden">Processing OCR...</div>
+
+    <!-- Back Button -->
+    <div class="mt-8">
+      <button onclick="goToDashboard()" class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-900">Back to Dashboard</button>
+    </div>
+  </div>
+
+  <script>
+    function startOCR(inputId, studentId) {
+  const fileInput = document.getElementById(inputId);
+  const status = document.getElementById(`status${studentId}`);
+  const ocrStatus = document.getElementById("ocrStatus");
+
+  if (!fileInput.files.length) {
+    alert("Please select a file.");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+
+  console.log(`Uploading file for student ${studentId}`);
+
+  ocrStatus.textContent = "⏳ Scanning with EasyOCR...";
+  ocrStatus.classList.remove("hidden");
+
+  fetch("http://127.0.0.1:5000/upload", {
+    method: "POST",
+    body: formData
+  })
+  .then(res => {
+    console.log("Response received from backend");
+    return res.json();
+  })
+  .then(data => {
+    console.log("OCR result received:", data);
+
+    if (data.text) {
+      const extractedText = Array.isArray(data.text) ? data.text.join("\n") : data.text;
+      localStorage.setItem(`scannedPaper${studentId}`, extractedText);
+      localStorage.setItem(`paperStatus${studentId}`, "Not Evaluated");
+
+      status.textContent = "✅ Uploaded & OCR done!";
+      ocrStatus.textContent = `✅ OCR completed for Answer Sheet ${studentId}`;
+      fileInput.value = "";
+    } else {
+      ocrStatus.textContent = "❌ OCR failed (No text found)";
+      status.textContent = "❌ OCR failed";
+      console.error("OCR failed:", data);
+    }
+  })
+  .catch(err => {
+    console.error("❌ OCR request failed:", err);
+    ocrStatus.textContent = "❌ OCR request failed";
+    status.textContent = "❌ OCR failed";
+  });
+}
+
+
+    function clearScan(studentId) {
+      localStorage.removeItem(`scannedPaper${studentId}`);
+      localStorage.removeItem(`paperStatus${studentId}`);
+      document.getElementById(`status${studentId}`).textContent = "Scan cleared ❌";
+    }
+
+    function goToDashboard() {
+      window.location.href = "dashboard.html"; // Adjust this path if needed
+    }
+
+    window.onload = () => {
+      for (let i = 1; i <= 3; i++) {
+        if (localStorage.getItem(`scannedPaper${i}`)) {
+          document.getElementById(`status${i}`).textContent = "Uploading done ✅";
+        }
+      }
+    };
+  </script>
+
+  <canvas id="canvasPreprocess" style="display:none;"></canvas>
+</body>
+</html>

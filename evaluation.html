@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Paper Evaluation</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 font-sans p-6">
+  <div class="max-w-7xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">Evaluate Paper</h1>
+
+    <!-- Webcam Row -->
+    <div class="bg-white p-4 shadow rounded mb-6">
+      <h3 class="text-lg font-semibold mb-2">Webcam Monitoring</h3>
+      
+      <video id="video" width="320" height="240" autoplay playsinline class="w-full h-64 bg-black"></video>
+    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+    <div id="result"></div>
+    </div>
+
+    <!-- Side-by-side Layout for OCR + Evaluation -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- OCR Extracted Answer -->
+      <div class="bg-white p-4 shadow rounded">
+        <h2 class="text-lg font-semibold mb-4">OCR Extracted Answer</h2>
+        <div id="ocrAnswer" class="whitespace-pre-wrap text-gray-800 bg-gray-100 p-3 rounded h-[calc(100%-2rem)] overflow-y-auto max-h-[80vh]">No scanned answer received.</div>
+      </div>
+
+      <!-- Evaluation Form -->
+      <form id="evaluationForm" class="space-y-6 overflow-y-auto max-h-[80vh] p-1">
+        <!-- Question 1 -->
+        <div class="bg-white p-4 shadow rounded">
+          <h2 class="text-lg font-semibold mb-2">Question 1: Define Newton's Second Law.</h2>
+          <p class="mb-4">Key Answer: Newton's Second Law states that the acceleration of an object is dependent upon two variables...</p>
+          <div class="flex items-center space-x-4">
+            <label class="font-medium">Max Marks: <span class="text-gray-700">5</span></label>
+            <input type="number" name="q1" max="5" class="w-24 p-2 border rounded" placeholder="Enter marks" required />
+          </div>
+        </div>
+
+        <!-- Question 2 -->
+        <div class="bg-white p-4 shadow rounded">
+          <h2 class="text-lg font-semibold mb-2">Question 2: Explain Ohm's Law with example.</h2>
+          <p class="mb-4">Key Answer: Ohm's Law states that the current through a conductor between two points is directly proportional to the voltage...</p>
+          <div class="flex items-center space-x-4">
+            <label class="font-medium">Max Marks: <span class="text-gray-700">10</span></label>
+            <input type="number" name="q2" max="10" class="w-24 p-2 border rounded" placeholder="Enter marks" required />
+          </div>
+        </div>
+
+        <!-- Question 3 -->
+        <div class="bg-white p-4 shadow rounded">
+          <h2 class="text-lg font-semibold mb-2">Question 3: Draw and explain a basic RC Circuit.</h2>
+          <p class="mb-4">Key Answer: A resistor-capacitor (RC) circuit is composed of a resistor and a capacitor connected in series...</p>
+          <div class="flex items-center space-x-4">
+            <label class="font-medium">Max Marks: <span class="text-gray-700">10</span></label>
+            <input type="number" name="q3" max="10" class="w-24 p-2 border rounded" placeholder="Enter marks" required />
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-between items-center mt-6">
+          <div class="space-x-4">
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">Submit Evaluation</button>
+            <a href="dashboard.html" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">Back to Dashboard</a>
+          </div>
+          <button onclick="clearMarks()" type="button" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600">Clear Marks</button>
+        </div>
+
+        <!-- Total Marks -->
+        <div id="totalMarksDisplay" class="mt-6 text-xl font-bold text-green-600 hidden">
+          Total Marks: <span id="totalMarks"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Webcam setup
+    const webcamElement = document.getElementById('webcam');
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        webcamElement.srcObject = stream;
+      })
+      .catch(err => {
+        console.error("Webcam error:", err);
+      });
+
+    // Load scanned OCR answer
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const studentId = urlParams.get('studentId');
+  const ocrText = localStorage.getItem(`scannedPaper${studentId}`);
+  const ocrAnswerElement = document.getElementById('ocrAnswer');
+
+  if (ocrText) {
+    ocrAnswerElement.textContent = `📝 Scanned Answer:\n\n${ocrText}`;
+  } else {
+    ocrAnswerElement.textContent = "❌ No scanned answer found for this student.";
+  }
+});
+
+
+
+    // Evaluation logic
+  
+
+    document.getElementById('evaluationForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const q1 = parseFloat(document.querySelector('[name="q1"]').value) || 0;
+      const q2 = parseFloat(document.querySelector('[name="q2"]').value) || 0;
+      const q3 = parseFloat(document.querySelector('[name="q3"]').value) || 0;
+      const total = q1 + q2 + q3;
+
+      const studentId = new URLSearchParams(window.location.search).get('studentId');
+      localStorage.setItem(`totalMarks${studentId}`, total);
+      localStorage.setItem(`evaluated${studentId}`, 'true');
+      localStorage.setItem(`paperStatus${studentId}`, 'Evaluated');
+
+      document.getElementById('totalMarks').innerText = total;
+      document.getElementById('totalMarksDisplay').classList.remove('hidden');
+
+      alert('Evaluation Submitted!');
+    });
+
+    function clearMarks() {
+      const studentId = new URLSearchParams(window.location.search).get('studentId');
+      localStorage.removeItem(`totalMarks${studentId}`);
+      localStorage.setItem(`evaluated${studentId}`, 'false');
+      localStorage.setItem(`paperStatus${studentId}`, 'Not Evaluated');
+      document.getElementById('totalMarks').innerText = '';
+      document.getElementById('totalMarksDisplay').classList.add('hidden');
+      alert('Marks cleared and status updated to "Not Evaluated"');
+      window.location.href = 'dashboard.html';
+    }
+
+    // emotions
+
+      const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { video.srcObject = stream; });
+
+    setInterval(async () => {
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('file', blob, 'frame.jpg');
+                const response = await fetch("http://127.0.0.1:5000/detect_emotion", {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                document.getElementById('result').innerText = data.emotion ?
+                    `Emotion: ${data.emotion}` : `Error: ${data.error}`;
+            }, 'image/jpeg');
+        }, 1000);
+  </script>
+</body>
+</html>
